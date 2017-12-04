@@ -19,12 +19,12 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import datetime
 import json
 import os
 import socket
 import uuid
 
+from datetime import datetime
 from ansible.plugins.callback import CallbackBase
 
 
@@ -50,11 +50,13 @@ class CallbackModule(CallbackBase):
         pipe_path = os.getenv('ANSIBLE_NAMED_PIPE', None)
         if pipe_path is None:
             self._display.warning(
-                'Path to the named pipe to write to must be contained by '
+                'Path to the named pipe to write to must be specified by '
                 'the `ANSIBLE_NAMED_PIPE` environment variable')
             self.disabled = True
+            self.pipe = None
+        else:
+            self.pipe = open(pipe_path, "w", 0600)
 
-        self.pipe = open(pipe_path, "w", 0600)
         self.session = os.getenv('ANSIBLE_SESSION_ID', str(uuid.uuid1()))
         self.hostname = socket.gethostname()
         self.uuid = None
@@ -62,7 +64,8 @@ class CallbackModule(CallbackBase):
         self.start_time = datetime.utcnow()
 
     def __del__(self):
-        self.pipe.close()
+        if self.pipe is not None:
+            self.pipe.close()
     
     def write_to_pipe(self, data):
         self.pipe.write('%s\n' % json.dumps(data))
